@@ -42,4 +42,31 @@ void startSequence(int duration) {
   }
   startRunning = false;
 }
-
+void soundLong(){
+  digitalWrite(HORN, HIGH);
+  delay(LongLeng);
+  digitalWrite(HORN, LOW);
+}
+void soundShort(){
+  digitalWrite(HORN, HIGH);
+  delay(ShortLeng);
+  digitalWrite(HORN, LOW);
+}
+ void soundHorn(int longs, int shorts){
+   for (i=0, i<longs, i++){
+     if (SequenceState.IDLE){
+       return;
+     }
+     soundLongs();
+     checkButton();
+   }
+   for (i=0, i<shorts, i++){
+     if (SequenceState.IDLE){
+       return;
+     }
+     soundShorts();
+     checkButton();
+     }
+   }
+  
+ }
