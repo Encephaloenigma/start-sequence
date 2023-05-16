@@ -2,6 +2,8 @@
 
 const int HORN = LED_BUILTIN;
 const int BUTTON = 2;
+const int longLeng
+const int shortLeng
 bool stopRequested = false;
 SequenceState.IDLE state = false;
 
@@ -44,12 +46,12 @@ void startSequence(int duration) {
 }
 void soundLong(){
   digitalWrite(HORN, HIGH);
-  delay(LongLeng);
+  delay(longLeng);
   digitalWrite(HORN, LOW);
 }
 void soundShort(){
   digitalWrite(HORN, HIGH);
-  delay(ShortLeng);
+  delay(shortLeng);
   digitalWrite(HORN, LOW);
 }
  void soundHorn(int longs, int shorts){
