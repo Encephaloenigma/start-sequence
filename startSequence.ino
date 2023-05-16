@@ -30,8 +30,8 @@ void startSequence(int duration) {
   // 5 short
   long start = millis();
   while (millis() - start < duration * 1000 * 30  && state == SequenceState.IN_SEQUENCE) {
-    // 3 long
-    // 2 long
+    soundHorn(3, 0);
+    soundHorn(2, 0);
     // 1 long 3 short
     // 1 long
     // 3 short
