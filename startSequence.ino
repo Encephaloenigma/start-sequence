@@ -2,8 +2,8 @@
 
 const int HORN = LED_BUILTIN;
 const int BUTTON = 2;
-const int longLeng
-const int shortLeng
+const int longLeng;
+const int shortLeng;
 bool stopRequested = false;
 SequenceState.IDLE state = false;
 
