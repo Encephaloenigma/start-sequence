@@ -1,0 +1,171 @@
+// represents the state the machine is in
+enum SequenceState {
+  IDLE,
+  IN_SEQUENCE,
+  POST_SEQUENCE,
+};
+
+// the duration of the start sequence
+// number cooresponds to the index of `timings` it starts at
+enum Duration {
+  THREE = 0,
+  ONE = 3
+};
+
+// the button is on pin 2
+const int BUTTON = 2;
+// the horn in on pin 13 (actually the buildin led for testing)
+const int HORN = LED_BUILTIN;
+// the time the long horn will fire
+const int longHornDelay = 1000;
+// the length the short horn will fire
+const int shortHornDelay = 200;
+// the time inbetween subsequent horn firings
+const int pause = 500;
+
+// the state of the system
+// can be IDLE, in which case the system just waits for a sequence to start,
+// IN_SEQUENCE, which runs a Duration::THREE or Duration::ONE length sequence while still checking for button presses as an interrupt,
+// and POST_SEQUENCE, which is active for some time after a sequence finishes, and if the button is pressed during this time a general recall will be sounded.
+SequenceState state = SequenceState::IDLE;
+
+// the timings of the Duration::THREE sequence,
+// with the first number being the seconds at which to fire
+// and the second and third being number of long and short horn lengths to fire
+const int timings[][3] = {
+  { 3 * 60, 3, 0 },
+  { 2 * 60, 2, 0 },
+  { 90, 1, 3 },
+  { 60, 1, 0 },
+  { 30, 0, 3 },
+  { 20, 0, 2 },
+  { 10, 0, 1 },
+  { 5, 0, 1 },
+  { 4, 0, 1 },
+  { 3, 0, 1 },
+  { 2, 0, 1 },
+  { 1, 0, 1 }
+};
+
+// length of `timings` array
+const int timingsLength = sizeof(timings) / sizeof(timings[0]);
+
+void setup() {
+  pinMode(HORN, OUTPUT);
+  pinMode(BUTTON, INPUT);
+  Serial.begin(9600);
+  // testing
+  wait(1000L);
+  state = SequenceState::IN_SEQUENCE;
+  startSequence(Duration::THREE);
+}
+
+void loop() {
+  checkButton();
+}
+
+// main state machine
+// TODO: add some sort of debounce protection
+void checkButton() {
+  int buttonState = digitalRead(BUTTON);
+  if (buttonState == HIGH) {
+    switch (state) {
+      case SequenceState::IDLE:
+        state = SequenceState::IN_SEQUENCE;
+        // maybe there could be two buttons for the different sequence lengths?
+        startSequence(Duration::THREE);
+        break;
+      case SequenceState::IN_SEQUENCE:
+        state = SequenceState::IDLE;
+        break;
+    }
+  }
+}
+
+// preferable to delay as it still checks the button instead of doing no-ops
+void wait(long ms) {
+  long start = millis();
+  while (getDelta(start) < ms) {
+    checkButton();
+  }
+}
+
+// 
+void startSequence(Duration duration) {
+  soundHorn(0, 5);
+  switch (duration) {
+    case Duration::THREE:
+      threeMinuteSequence();
+      break;
+    case Duration::ONE:
+      // can be merged with three minute sequence and startSequence by setting `i` to 3 instead of 0;
+      oneMinuteSequence();
+      break;
+  }
+  soundHorn(1, 0);
+}
+
+void oneMinuteSequence() {
+  return;
+}
+
+void threeMinuteSequence() {
+  unsigned long start = millis();
+  // must be a long because three mins is 180000 ms, which is larger than 65536
+  // can still go negative tho, just we don't want it via overflow
+  long current = 3L * 60L * 1000L - getDelta(start);
+  // set up iteration through the timings array, only going to the next item when milliseconds to the current item is reached
+  int i = 0;
+  // loops until current is neg (three mins have passed) or the state gets changed by a button press
+  while (current >= 0 && state == SequenceState::IN_SEQUENCE) {
+    current = 3L * 60L * 1000L - getDelta(start);
+    // timings also must be a long, additionally this makes sure that i stays within the bound of `timings`
+    if (current <= (long)timings[i][0] * 1000L && i < timingsLength) {
+      soundHorn(timings[i][1], timings[i][2]);
+      i++;
+    }
+    checkButton();
+  }
+}
+
+// get milliseconds since `start`
+// make sure > 0 for the heck of it
+unsigned long getDelta(unsigned long start) {
+  long delta = millis() - start;
+  return delta > 0 ? (unsigned long) delta : 0;
+}
+
+void longHorn() {
+  digitalWrite(HORN, HIGH);
+  wait(longHornDelay);
+  digitalWrite(HORN, LOW);
+  wait(pause);
+}
+
+void shortHorn() {
+  digitalWrite(HORN, HIGH);
+  wait(shortHornDelay);
+  digitalWrite(HORN, LOW);
+  wait(pause);
+}
+
+void soundHorn(int longs, int shorts) {
+  Serial.print(longs);
+  Serial.print(", ");
+  Serial.print(shorts);
+  Serial.print("\n");
+  for (int i = 0; i < longs; i++) {
+    if (SequenceState::IDLE) {
+      return;
+    }
+    longHorn();
+    checkButton();
+  }
+  for (int i = 0; i < shorts; i++) {
+    if (SequenceState::IDLE) {
+      return;
+    }
+    shortHorn();
+    checkButton();
+  }
+}
