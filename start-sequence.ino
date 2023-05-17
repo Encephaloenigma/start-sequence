@@ -21,7 +21,7 @@ const int longHornDelay = 1000;
 // the length the short horn will fire
 const int shortHornDelay = 200;
 // the time inbetween subsequent horn firings
-const int pause = 500;
+const int pause = 400;
 
 // the state of the system
 // can be IDLE, in which case the system just waits for a sequence to start,
@@ -57,7 +57,7 @@ void setup() {
   // testing
   wait(1000L);
   state = SequenceState::IN_SEQUENCE;
-  startSequence(Duration::THREE);
+  startSequence(Duration::ONE);
 }
 
 void loop() {
@@ -93,32 +93,25 @@ void wait(long ms) {
 // 
 void startSequence(Duration duration) {
   soundHorn(0, 5);
+  wait(pause);
+  // must be a long because three mins is 180000 ms, which is larger than 2^16
+  long timer;
+  // set up iteration through the timings array, only going to the next item when milliseconds to the current item is reached
+  int i = duration;
   switch (duration) {
     case Duration::THREE:
-      threeMinuteSequence();
+      timer = 3L * 60L * 1000L;
       break;
     case Duration::ONE:
-      // can be merged with three minute sequence and startSequence by setting `i` to 3 instead of 0;
-      oneMinuteSequence();
+      timer = 60L * 1000L;
       break;
   }
-  soundHorn(1, 0);
-}
-
-void oneMinuteSequence() {
-  return;
-}
-
-void threeMinuteSequence() {
-  unsigned long start = millis();
-  // must be a long because three mins is 180000 ms, which is larger than 65536
-  // can still go negative tho, just we don't want it via overflow
-  long current = 3L * 60L * 1000L - getDelta(start);
-  // set up iteration through the timings array, only going to the next item when milliseconds to the current item is reached
-  int i = 0;
+  long start = millis();
+    // can go negative, we just don't want it via overflow
+  long current = timer - getDelta(start);
   // loops until current is neg (three mins have passed) or the state gets changed by a button press
   while (current >= 0 && state == SequenceState::IN_SEQUENCE) {
-    current = 3L * 60L * 1000L - getDelta(start);
+    current = timer - getDelta(start);
     // timings also must be a long, additionally this makes sure that i stays within the bound of `timings`
     if (current <= (long)timings[i][0] * 1000L && i < timingsLength) {
       soundHorn(timings[i][1], timings[i][2]);
@@ -126,13 +119,13 @@ void threeMinuteSequence() {
     }
     checkButton();
   }
+  soundHorn(1, 0);
 }
 
 // get milliseconds since `start`
-// make sure > 0 for the heck of it
-unsigned long getDelta(unsigned long start) {
+long getDelta(long start) {
   long delta = millis() - start;
-  return delta > 0 ? (unsigned long) delta : 0;
+  return delta;
 }
 
 void longHorn() {
