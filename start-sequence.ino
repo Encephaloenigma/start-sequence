@@ -62,7 +62,9 @@ const int timingsLength = sizeof(timings) / sizeof(timings[0]);
 
 void setup() {
   pinMode(HORN, OUTPUT);
-  pinMode(BUTTON, INPUT_PULLUP);
+  pinMode(TOP_PIN, INPUT);
+  pinMode(BOTTOM_PIN, INPUT);
+  pinMode(BUTTON, INPUT);
   Serial.begin(9600);
 }
 
@@ -123,7 +125,7 @@ void startSequence(Duration duration) {
   // loops until current is neg (three mins have passed) or the state gets changed by a button press
   while (current >= 0 && state == SequenceState::IN_SEQUENCE) {
     current = timer - getDelta(start);
-    // timings also must be a long, additionally this makes sure that i stays within the bound of `timings`
+    // timings also must be a long, additionally this makes sure that i stays within the bound of `timings` (modifing list length based on the portition used)
     if (current <= (long)timings[i][0] * 1000L && i < timingsLength - duration) {
       soundHorn(timings[i][1], timings[i][2]);
       i++;
