@@ -52,12 +52,12 @@ const int timingsLength = sizeof(timings) / sizeof(timings[0]);
 
 void setup() {
   pinMode(HORN, OUTPUT);
-  pinMode(BUTTON, INPUT);
+  pinMode(BUTTON, INPUT_PULLUP);
   Serial.begin(9600);
   // testing
-  wait(1000L);
-  state = SequenceState::IN_SEQUENCE;
-  startSequence(Duration::THREE);
+  // wait(1000L);
+  // state = SequenceState::IN_SEQUENCE;
+  // startSequence(Duration::THREE);
 }
 
 void loop() {
@@ -71,11 +71,14 @@ void checkButton() {
   if (buttonState == HIGH) {
     switch (state) {
       case SequenceState::IDLE:
+        // an excuse for debounce
+        delay(500);
         state = SequenceState::IN_SEQUENCE;
         // maybe there could be two buttons for the different sequence lengths?
         startSequence(Duration::THREE);
         break;
       case SequenceState::IN_SEQUENCE:
+        delay(500);
         state = SequenceState::IDLE;
         break;
     }
@@ -119,6 +122,9 @@ void startSequence(Duration duration) {
     }
     checkButton();
   }
+  if (state == SequenceState::IN_SEQUENCE) {
+    soundHorn(1, 0);
+  }
   soundHorn(1, 0);
 }
 
@@ -148,14 +154,14 @@ void soundHorn(int longs, int shorts) {
   Serial.print(shorts);
   Serial.print("\n");
   for (int i = 0; i < longs; i++) {
-    if (SequenceState::IDLE) {
+    if (state == SequenceState::IDLE) {
       return;
     }
     longHorn();
     checkButton();
   }
   for (int i = 0; i < shorts; i++) {
-    if (SequenceState::IDLE) {
+    if (state == SequenceState::IDLE) {
       return;
     }
     shortHorn();
