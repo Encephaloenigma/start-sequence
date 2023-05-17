@@ -57,7 +57,7 @@ void setup() {
   // testing
   wait(1000L);
   state = SequenceState::IN_SEQUENCE;
-  startSequence(Duration::ONE);
+  startSequence(Duration::THREE);
 }
 
 void loop() {
@@ -84,7 +84,7 @@ void checkButton() {
 
 // preferable to delay as it still checks the button instead of doing no-ops
 void wait(long ms) {
-  long start = millis();
+  long start = (long) millis();
   while (getDelta(start) < ms) {
     checkButton();
   }
@@ -106,7 +106,7 @@ void startSequence(Duration duration) {
       timer = 60L * 1000L;
       break;
   }
-  long start = millis();
+  long start = (long) millis();
     // can go negative, we just don't want it via overflow
   long current = timer - getDelta(start);
   // loops until current is neg (three mins have passed) or the state gets changed by a button press
@@ -124,7 +124,7 @@ void startSequence(Duration duration) {
 
 // get milliseconds since `start`
 long getDelta(long start) {
-  long delta = millis() - start;
+  long delta = (long) millis() - start;
   return delta;
 }
 
