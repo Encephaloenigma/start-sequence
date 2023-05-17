@@ -8,14 +8,20 @@ enum SequenceState {
 // the duration of the start sequence
 // number cooresponds to the index of `timings` it starts at
 enum Duration {
-  THREE = 0,
-  ONE = 3
+  FIVE = 0,
+  THREE = 1,
+  ONE = 4,
+
 };
 
 // the button is on pin 2
 const int BUTTON = 2;
 // the horn in on pin 13 (actually the buildin led for testing)
 const int HORN = LED_BUILTIN;
+// the digital input for the top pole of the DPDT on-off-on switch
+const int TOP_PIN = 3;
+// the input for bottom pole of said switch
+const int BOTTOM_PIN = 4;
 // the time the long horn will fire
 const int longHornDelay = 1000;
 // the length the short horn will fire
@@ -33,9 +39,13 @@ SequenceState state = SequenceState::IDLE;
 // with the first number being the seconds at which to fire
 // and the second and third being number of long and short horn lengths to fire
 const int timings[][3] = {
+  // 5 min
+  { 5 * 60, 5, 0 },
+  // 3 min
   { 3 * 60, 3, 0 },
   { 2 * 60, 2, 0 },
   { 90, 1, 3 },
+  // one min
   { 60, 1, 0 },
   { 30, 0, 3 },
   { 20, 0, 2 },
@@ -54,31 +64,26 @@ void setup() {
   pinMode(HORN, OUTPUT);
   pinMode(BUTTON, INPUT_PULLUP);
   Serial.begin(9600);
-  // testing
-  // wait(1000L);
-  // state = SequenceState::IN_SEQUENCE;
-  // startSequence(Duration::THREE);
 }
 
 void loop() {
   checkButton();
 }
 
+int lastButtonState = LOW;
+int buttonState = LOW;
+
 // main state machine
-// TODO: add some sort of debounce protection
 void checkButton() {
-  int buttonState = digitalRead(BUTTON);
-  if (buttonState == HIGH) {
+  lastButtonState = buttonState;
+  buttonState = digitalRead(BUTTON);
+  if (lastButtonState == LOW && buttonState == HIGH) {
     switch (state) {
       case SequenceState::IDLE:
-        // an excuse for debounce
-        delay(500);
         state = SequenceState::IN_SEQUENCE;
-        // maybe there could be two buttons for the different sequence lengths?
-        startSequence(Duration::THREE);
+        startSequence(getDuration());
         break;
       case SequenceState::IN_SEQUENCE:
-        delay(500);
         state = SequenceState::IDLE;
         break;
     }
@@ -93,7 +98,7 @@ void wait(long ms) {
   }
 }
 
-// 
+// self-explanitory
 void startSequence(Duration duration) {
   soundHorn(0, 5);
   wait(pause);
@@ -102,6 +107,9 @@ void startSequence(Duration duration) {
   // set up iteration through the timings array, only going to the next item when milliseconds to the current item is reached
   int i = duration;
   switch (duration) {
+    case Duration::FIVE:
+      timer = 5L * 60L * 1000L;
+      break;
     case Duration::THREE:
       timer = 3L * 60L * 1000L;
       break;
@@ -116,7 +124,7 @@ void startSequence(Duration duration) {
   while (current >= 0 && state == SequenceState::IN_SEQUENCE) {
     current = timer - getDelta(start);
     // timings also must be a long, additionally this makes sure that i stays within the bound of `timings`
-    if (current <= (long)timings[i][0] * 1000L && i < timingsLength) {
+    if (current <= (long)timings[i][0] * 1000L && i < timingsLength - duration) {
       soundHorn(timings[i][1], timings[i][2]);
       i++;
     }
@@ -124,8 +132,11 @@ void startSequence(Duration duration) {
   }
   if (state == SequenceState::IN_SEQUENCE) {
     soundHorn(1, 0);
+    // post sequence not implemented yet, would just softlock
+    // state = POST_SEQUENCE;
+  } else {
+    Serial.print("cancelled sequence\n");
   }
-  soundHorn(1, 0);
 }
 
 // get milliseconds since `start`
@@ -149,6 +160,7 @@ void shortHorn() {
 }
 
 void soundHorn(int longs, int shorts) {
+  Serial.print("horn pattern: ");
   Serial.print(longs);
   Serial.print(", ");
   Serial.print(shorts);
@@ -167,4 +179,10 @@ void soundHorn(int longs, int shorts) {
     shortHorn();
     checkButton();
   }
+}
+
+Duration getDuration() {
+  bool bottomPole = digitalRead(TOP_PIN) == HIGH;
+  bool topPole = digitalRead(BOTTOM_PIN) == HIGH;
+  return !topPole && !bottomPole ? Duration::THREE : topPole ? Duration::FIVE : Duration::ONE;
 }
