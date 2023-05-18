@@ -1,4 +1,8 @@
-#include "SevSeg.h"
+#include <AceTMI.h>
+#include <AceSegment.h>
+
+using ace_tmi::SimpleTmi1637Interface;
+using ace_segment::Tm1637Module;
 
 // represents the state the machine is in
 enum SequenceState {
@@ -16,19 +20,19 @@ enum Duration {
 };
 
 // the button is on pin 2
-const int BUTTON = 2;
+const int BUTTON = 4;
 // the horn in on pin 13 (actually the buildin led for testing)
-const int HORN = 9;
+const int HORN = A0;
 // the digital input for the top pole of the DPDT on-off-on switch
 const int TOP_PIN = 3;
 // the input for bottom pole of said switch
-const int BOTTOM_PIN = 4;
+const int BOTTOM_PIN = 2;
 // the pin of input for stopping a sequence or initalizing a general recall
 const int STOP_RECALL_BUTTON = 5;
 // no longer using color to show state since there are no more GPIO pins to spare :P
-const int red_pin = 1;
-const int green_pin = 0;
-const int blue_pin = 8;
+// const int red_pin = 1;
+// const int green_pin = 0;
+// const int blue_pin = 8;
 
 // the length of time the long horn will fire for
 const int longHornDelay = 1000;
@@ -36,7 +40,13 @@ const int longHornDelay = 1000;
 const int shortHornDelay = 200;
 // the time inbetween subsequent horn firings
 const int pause = 400;
-SevSeg sevseg;
+
+const uint8_t CLK_PIN = A1;
+const uint8_t DIO_PIN = A2;
+const uint8_t NUM_DIGITS = 4;
+const uint8_t DELAY_MICROS = 100;
+SimpleTmi1637Interface tmiInterface(DIO_PIN, CLK_PIN, DELAY_MICROS);
+Tm1637Module<SimpleTmi1637Interface, NUM_DIGITS> display(tmiInterface);
 
 // globals for putting time on the screen
 
@@ -122,9 +132,9 @@ void setup() {
   pinMode(BOTTOM_PIN, INPUT);
   pinMode(BUTTON, INPUT);
   pinMode(STOP_RECALL_BUTTON, INPUT);
-  pinMode(red_pin, OUTPUT);
-  pinMode(green_pin, OUTPUT);
-  pinMode(blue_pin, OUTPUT);
+  // pinMode(red_pin, OUTPUT);
+  // pinMode(green_pin, OUTPUT);
+  // pinMode(blue_pin, OUTPUT);
   // it's serial or the LEDs, and this code won't fix itself :/
   // Serial.begin(9600);
   // 7 segment init
@@ -134,8 +144,9 @@ void setup() {
   // indicates that 4 resistors were placed on the digit pins
   // set variable to 1 if you want to use 8 resistors on the segment pins
   bool resistorsOnSegments = 0;
-  sevseg.begin(COMMON_ANODE, numDigits, digitPins, segmentPins, resistorsOnSegments);
-  sevseg.setBrightness(100);
+  display.setBrightness(100);
+  tmiInterface.begin();
+  display.begin();
 }
 
 // checks buttons and updates screen
@@ -155,31 +166,38 @@ void checkLoop() {
 
 // screen
 void updateScreen() {
-  Serial.print("updating screen at ");
-  Serial.println(micros());
   if (warningRunning) {
-    Serial.print("warning signal: ");
-    Serial.println(warningSignal);
-    char segments[] = { '0', '0', '0', String(warningSignal)[0] };
-    sevseg.setChars(segments);
+    for (int i = 0; i < 4; i++) {
+      display.setPatternAt(i, digitCodeMap[0]);
+    }
+    display.setPatternAt(warningSignal < 4 ? 4 - warningSignal : 0, digitCodeMap[warningSignal]);
   } else if (recallRunning) {
-    sevseg.setChars("XXXX");
+    for (int i = 0; i < 4; i++) {
+      display.setPatternAt(i, 0b01110110);
+    }
   } else if (timerRunning) {
     int minutes = currentTime / (1000L * 60L);
     int seconds = currentTime / 1000 % 60;
     int decimal = currentTime / 100 % 10;
     uint8_t segments[4] = {
-      digitCodeMap[minutes] | LCD_PERIOD,
+      digitCodeMap[minutes],
       digitCodeMap[seconds / 10],
-      digitCodeMap[seconds % 10] | LCD_PERIOD,
+      digitCodeMap[seconds % 10],
       digitCodeMap[decimal]
     };
-    sevseg.setSegments(segments);
+    for (int i = 0; i < 4; i++) {
+      display.setPatternAt(i, segments[i]);
+    }
+    // display.setDecimalPointAt(0, true);
+    // display.setDecimalPointAt(3, true);
   } else {
-    char segments[] = { '0', '0', '0', String(getDuration())[0] };
-    sevseg.setChars(segments);
+    display.setPatternAt(0, digitCodeMap[getDuration()]);
+    for (int i = 1; i < 4; i++) {
+      display.setPatternAt(i, digitCodeMap[0]);
+    }
   }
-  sevseg.refreshDisplay();
+  // .setBrightness(2);
+  display.flush();
 }
 
 // dangerous and bad global state management but oh well
@@ -215,6 +233,9 @@ void updateState() {
   }
   if (lastStopButtonState == LOW && stopButtonState == HIGH) {
     switch (state) {
+      // for testing
+      // case SequenceState::IDLE:
+      // state = SequenceState::POST_SEQUENCE;
       case SequenceState::POST_SEQUENCE:
         startRecall();
       case SequenceState::IN_SEQUENCE:
@@ -284,11 +305,11 @@ void startRecall() {
 
 // color is a three bit number, rgb
 // currently unused since there are no more GPIO pins :(
-void setColor(int color) {
-  digitalWrite(red_pin, (color >> 2) & 1);
-  digitalWrite(green_pin, (color >> 1) & 1);
-  digitalWrite(blue_pin, color & 1);
-}
+// void setColor(int color) {
+//   digitalWrite(red_pin, (color >> 2) & 1);
+//   digitalWrite(green_pin, (color >> 1) & 1);
+//   digitalWrite(blue_pin, color & 1);
+// }
 
 // get milliseconds since `start`
 long getDelta(long start) {
