@@ -48,11 +48,11 @@ long currentTime;
 long timerLength;
 // the starting time of the current sequence
 long start;
-// 
+//
 bool warningRunning = false;
-// 
+//
 int warningSignal = 5;
-// 
+//
 bool recallRunning = false;
 
 
@@ -67,7 +67,7 @@ SequenceState state = SequenceState::IDLE;
 // the timings for the sequences
 // with the first number being the seconds at which to fire
 // and the second and third being number of long and short horn lengths to fire
-// the index that each Duration starts at is found with the `durationToIndex` and 
+// the index that each Duration starts at is found with the `durationToIndex` and
 // the color of each state is found with the `durationToColor` index
 const int timings[][3] = {
   // five min
@@ -160,12 +160,11 @@ void updateScreen() {
   if (warningRunning) {
     Serial.print("warning signal: ");
     Serial.println(warningSignal);
-    char segments[] = {'0', '0', '0', String(warningSignal)[0] };
+    char segments[] = { '0', '0', '0', String(warningSignal)[0] };
     sevseg.setChars(segments);
   } else if (recallRunning) {
     sevseg.setChars("XXXX");
-  }
-  else if (timerRunning) {
+  } else if (timerRunning) {
     int minutes = currentTime / (1000L * 60L);
     int seconds = currentTime / 1000 % 60;
     int decimal = currentTime / 100 % 10;
