@@ -19,16 +19,16 @@ enum Duration {
   ONE = 1,
 };
 
-// the button is on pin 2
-const int BUTTON = 4;
-// the horn in on pin 13 (actually the buildin led for testing)
-const int HORN = A0;
+// the button for starting the sequence
+const int BUTTON = 11;
+// the horn relay input pin
+const int HORN = A1;
 // the digital input for the top pole of the DPDT on-off-on switch
-const int TOP_PIN = 3;
+const int TOP_PIN = 13;
 // the input for bottom pole of said switch
-const int BOTTOM_PIN = 2;
+const int BOTTOM_PIN = 12;
 // the pin of input for stopping a sequence or initalizing a general recall
-const int STOP_RECALL_BUTTON = 5;
+const int STOP_RECALL_BUTTON = 10;
 // no longer using color to show state since there are no more GPIO pins to spare :P
 // const int red_pin = 1;
 // const int green_pin = 0;
@@ -41,7 +41,7 @@ const int shortHornDelay = 200;
 // the time inbetween subsequent horn firings
 const int pause = 400;
 
-const uint8_t CLK_PIN = A1;
+const uint8_t CLK_PIN = A3;
 const uint8_t DIO_PIN = A2;
 const uint8_t NUM_DIGITS = 4;
 const uint8_t DELAY_MICROS = 100;
@@ -136,7 +136,7 @@ void setup() {
   // pinMode(green_pin, OUTPUT);
   // pinMode(blue_pin, OUTPUT);
   // it's serial or the LEDs, and this code won't fix itself :/
-  // Serial.begin(9600);
+  Serial.begin(9600);
   // 7 segment init
   byte numDigits = 4;
   byte digitPins[] = { 10, 11, 12, 13 };
@@ -221,6 +221,10 @@ void updateState() {
   lastStartButtonState = startButtonState;
   startButtonState = digitalRead(BUTTON);
   lastStopButtonState = stopButtonState;
+  Serial.print("last: ");
+  Serial.print(lastStartButtonState);
+  Serial.print(" curr: ");
+  Serial.println(startButtonState);
   stopButtonState = digitalRead(STOP_RECALL_BUTTON);
   if (lastStartButtonState == LOW && startButtonState == HIGH) {
     switch (state) {
